@@ -87,9 +87,9 @@ def get_listing_information(listing_id):
             temp_pol_list.append(item)
     for item in temp_pol_list:
         pol_as_list = re.findall(pol_reg_2,item.text)
-        if "Pending" in pol_as_list[0]:
+        if re.search('P|pending',pol_as_list[0]):
             policy = "Pending"
-        elif "Exempt" in pol_as_list[0]:
+        elif re.search('E|exempt',pol_as_list[0]):
             policy = "Exempt"
         else:
             policy = pol_as_list[0]
@@ -173,7 +173,16 @@ def write_csv(data, filename):
 
     This function should not return anything.
     """
-    pass
+    f = open(filename, 'w')
+    writer = csv.writer(f)
+    headers = [("Listing Title", "Cost", "Listing ID", "Policy Number", "Place Type", "Number of Bedrooms")]
+    writer.writerows(headers)
+    sorted_data = sorted(data, key = lambda t:t[1])
+    writer.writerows(sorted_data)
+    f.close()
+
+
+
 
 
 def check_policy_numbers(data):
@@ -307,12 +316,14 @@ class TestCases(unittest.TestCase):
         # check that there are 21 lines in the csv
         self.assertEqual(len(csv_lines), 21)
         # check that the header row is correct
+        self.assertEqual(csv_lines[0],["Listing Title", "Cost", "Listing ID", "Policy Number", "Place Type", "Number of Bedrooms"])
 
         # check that the next row is Private room in Mission District,82,51027324,Pending,Private Room,1
+        self.assertEqual(csv_lines[1],["Private room in Mission District","82","51027324","Pending","Private Room","1"])
 
         # check that the last row is Apartment in Mission District,399,28668414,Pending,Entire Room,2
-
-        pass
+        self.assertEqual(csv_lines[-1],["Apartment in Mission District","399","28668414","Pending","Entire Room","2"])
+        
 
     def test_check_policy_numbers(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
