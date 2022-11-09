@@ -89,7 +89,7 @@ def get_listing_information(listing_id):
         pol_as_list = re.findall(pol_reg_2,item.text)
         if re.search('P|pending',pol_as_list[0]):
             policy = "Pending"
-        elif re.search('E|exempt',pol_as_list[0]):
+        elif re.search('E|exempt',pol_as_list[0]) or re.search('N|not needed',pol_as_list[0]) :
             policy = "Exempt"
         else:
             policy = pol_as_list[0]
@@ -204,7 +204,29 @@ def check_policy_numbers(data):
     ]
 
     """
-    pass
+    bad_numbers_list = []
+    numbers_list = []
+    bad_id_list = []
+    x = 0
+    for line in data:
+        if x > 0:
+            numbers_list.append(line[3])
+        x += 1
+    for num in numbers_list:
+        if num == "Pending" or num == "Exempt":
+            continue
+        elif re.search("20[0-9]{2}-00[0-9]{4}STR",num):
+            continue
+        elif re.search("STR-000[0-9]{4}",num):
+            continue
+        else:
+            bad_numbers_list.append(num)
+    for num in bad_numbers_list:
+        for line in data:
+            if line[3] == num:
+                bad_id_list.append(line[2])
+    return bad_id_list
+
 
 
 def extra_credit(listing_id):
@@ -334,11 +356,17 @@ class TestCases(unittest.TestCase):
         # check that the return value is a list
         self.assertEqual(type(invalid_listings), list)
         # check that there is exactly one element in the string
+        self.assertEqual(len(invalid_listings),1)
 
         # check that the element in the list is a string
+        self.assertEqual(type(invalid_listings[0]),str)
+        ## added test if there are multiple invalid listings to make sure all are strings
+        for num in invalid_listings:
+            self.assertEqual(type(num),str)
+        
 
         # check that the first element in the list is '16204265'
-        pass
+        self.assertEqual(invalid_listings[0],'16204265')
 
 
 if __name__ == '__main__':
