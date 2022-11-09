@@ -25,8 +25,28 @@ def get_listings_from_search_results(html_file):
         ('Loft in Mission District', 210, '1944564'),  # example
     ]
     """
-    pass
-
+    resp = open(html_file)
+    soup = BeautifulSoup(resp.read(), 'html.parser')
+    resp.close()
+    title_tag = soup.find_all("div", class_ = "t1jojoys dir dir-ltr")
+    title_list = []
+    id_list = []
+    regex_id = r"title_([0-9]+)"
+    for item in title_tag:
+        id_as_list = re.findall(regex_id,str(item))
+        for id in id_as_list:
+            id_list.append(id)
+        title = item.text
+        title_list.append(title)
+    cost_tag = soup.find_all("span", class_ = "_tyxjp1")
+    cost_list = []
+    for cost in cost_tag:
+        cost_list.append(int(cost.text.strip('$')))
+    output = []
+    for i in range(len(cost_list)):
+        output.append((title_list[i],cost_list[i],id_list[i]))
+    return output
+    
 
 def get_listing_information(listing_id):
     """
@@ -52,7 +72,56 @@ def get_listing_information(listing_id):
         number of bedrooms
     )
     """
-    pass
+    f_name = "html_files/listing_" + listing_id + ".html"
+    resp = open(f_name)
+    soup = BeautifulSoup(resp.read(), 'html.parser')
+
+    ## find policy number
+    policy_tag = soup.find_all("li", class_ ="f19phm7j dir dir-ltr")
+    pol_reg_1 = r"Policy number:.+"
+    pol_reg_2 = r"Policy number: (.+)"
+    temp_pol_list = []
+    policy_list = []
+    for item in policy_tag:
+        if re.search(pol_reg_1, str(item)):
+            temp_pol_list.append(item)
+    for item in temp_pol_list:
+        pol_as_list = re.findall(pol_reg_2,item.text)
+        if "Pending" in pol_as_list[0]:
+            policy = "Pending"
+        elif "Exempt" in pol_as_list[0]:
+            policy = "Exempt"
+        else:
+            policy = pol_as_list[0]
+
+    ##find place type
+    
+    place_tag = soup.find("h2", class_ = "_14i3z6h")
+    if re.search('P|private', place_tag.text):
+        place = "Private Room"
+    elif re.search('S|shared', place_tag.text):
+        place = "Shared Room"
+    else:
+        place = "Entire Room"
+
+    ## find bedrooms
+    bed_reg = r"[0-9]+.+[Bb]edroom"
+    bedroom_tag = soup.find_all("li", class_="l7n4lsf dir dir-ltr")
+    for item in bedroom_tag:
+        tag = item.find("span", class_ = None)
+        #if "Studio" in tag:
+            #num_bedrooms = 1
+        if re.search(bed_reg,str(tag)):
+            bed_string = tag.text
+            num_bedrooms = int(bed_string.split()[0])
+        if re.search(r"Studio",str(tag)):
+            num_bedrooms = 1
+    resp.close()
+    ## return the tuple
+    return (policy,place,num_bedrooms)
+    
+
+
 
 
 def get_detailed_listing_database(html_file):
@@ -69,7 +138,17 @@ def get_detailed_listing_database(html_file):
         ...
     ]
     """
-    pass
+    out = []
+
+    info_1_list = get_listings_from_search_results(html_file)
+    for i in range(len(info_1_list)):
+        id = info_1_list[i][2]
+        info_1 = info_1_list[i]
+        info_2 = get_listing_information(id)
+        full = (info_1 + info_2)
+        out.append(full)
+    return out
+       
 
 
 def write_csv(data, filename):
@@ -147,11 +226,19 @@ class TestCases(unittest.TestCase):
         # check that the variable you saved after calling the function is a list
         self.assertEqual(type(listings), list)
         # check that each item in the list is a tuple
-
+        for item in listings:
+            self.assertIsInstance(item,tuple)
         # check that the first title, cost, and listing id tuple is correct (open the search results html and find it)
+        self.assertEqual(listings[0][0],"Loft in Mission District")
+        self.assertEqual(listings[0][1],210)
+        self.assertEqual(listings[0][2],"1944564")
+        
+
 
         # check that the last title is correct (open the search results html and find it)
-        pass
+        self.assertEqual(listings[19][0],"Guest suite in Mission District")
+        self.assertEqual(listings[19][1],238)
+        self.assertEqual(listings[19][2],"32871760")
 
     def test_get_listing_information(self):
         html_list = ["1623609",
@@ -174,12 +261,15 @@ class TestCases(unittest.TestCase):
             # check that the third element in the tuple is an int
             self.assertEqual(type(listing_information[2]), int)
         # check that the first listing in the html_list has policy number 'STR-0001541'
+        self.assertEqual(get_listing_information(html_list[0])[0],"STR-0001541")
 
         # check that the last listing in the html_list is a "Private Room"
+        self.assertEqual(get_listing_information(html_list[-1])[1],"Private Room")
 
         # check that the third listing has one bedroom
+        self.assertEqual(get_listing_information(html_list[2])[2],1)
 
-        pass
+        
 
     def test_get_detailed_listing_database(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
@@ -194,11 +284,13 @@ class TestCases(unittest.TestCase):
 
         # check that the first tuple is made up of the following:
         # 'Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1
+        self.assertEqual(detailed_database[0],('Loft in Mission District', 210, '1944564', '2022-004088STR', 'Entire Room', 1))
 
         # check that the last tuple is made up of the following:
         # 'Guest suite in Mission District', 238, '32871760', 'STR-0004707', 'Entire Room', 1
+        self.assertEqual(detailed_database[-1],('Guest suite in Mission District', 238, '32871760', 'STR-0004707', 'Entire Room', 1))
 
-        pass
+        
 
     def test_write_csv(self):
         # call get_detailed_listing_database on "html_files/mission_district_search_results.html"
@@ -239,7 +331,9 @@ class TestCases(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    #print(get_listing_information("1944564"))
     database = get_detailed_listing_database("html_files/mission_district_search_results.html")
     write_csv(database, "airbnb_dataset.csv")
     check_policy_numbers(database)
     unittest.main(verbosity=2)
+
