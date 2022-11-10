@@ -243,8 +243,24 @@ def extra_credit(listing_id):
     gone over their 90 day limit, else return True, indicating the lister has
     never gone over their limit.
     """
-    pass
-
+    f_name = "html_files/listing_" + listing_id + "_reviews.html"
+    resp = open(f_name)
+    soup = BeautifulSoup(resp.read(), 'html.parser')
+    date_tag = soup.find_all("li", class_ = "_1f1oir5")
+    date_list = []
+    year_dict = {}
+    resp.close()
+    for tag in date_tag:
+        date_list.append(tag.text)
+    for date in date_list:
+        year = date.split()[-1]
+        if year not in year_dict.keys():
+            year_dict[year] = 0
+        year_dict[year] += 1
+    for val in year_dict.values():
+        if val > 90:
+            return False
+    return True
 
 class TestCases(unittest.TestCase):
 
@@ -368,11 +384,24 @@ class TestCases(unittest.TestCase):
         # check that the first element in the list is '16204265'
         self.assertEqual(invalid_listings[0],'16204265')
 
+    def test_extra_credit(self):
+        ## call extra credit to return True or False
+        bool_violation_T = extra_credit("1944564")
+        bool_violation_F = extra_credit("16204265")
+        ## check we are getting a bool back
+        self.assertEqual(type(bool_violation_F),bool)
+        ##check that id 1944564 returns True because no year has more than 90 reviews
+        self.assertEqual(bool_violation_T,True)
+        ## check that id 16204265 returns True because a year has more than 90 reviews
+        self.assertEqual(bool_violation_F,False)
+
+
+
+
 
 if __name__ == '__main__':
-    #print(get_listing_information("1944564"))
     database = get_detailed_listing_database("html_files/mission_district_search_results.html")
     write_csv(database, "airbnb_dataset.csv")
-    check_policy_numbers(database)
+    f = check_policy_numbers(database)
     unittest.main(verbosity=2)
 
