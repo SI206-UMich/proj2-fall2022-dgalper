@@ -283,9 +283,9 @@ class TestCases(unittest.TestCase):
 
 
         # check that the last title is correct (open the search results html and find it)
-        self.assertEqual(listings[19][0],"Guest suite in Mission District")
-        self.assertEqual(listings[19][1],238)
-        self.assertEqual(listings[19][2],"32871760")
+        self.assertEqual(listings[-1][0],"Guest suite in Mission District")
+        self.assertEqual(listings[-1][1],238)
+        self.assertEqual(listings[-1][2],"32871760")
 
     def test_get_listing_information(self):
         html_list = ["1623609",
